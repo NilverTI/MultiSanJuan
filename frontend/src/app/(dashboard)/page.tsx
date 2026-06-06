@@ -5,11 +5,9 @@ import { dashboardApi, productsApi, customersApi, categoriesApi } from '@/servic
 import { formatCurrency } from '@/lib/utils';
 import { useAuth } from '@/providers/auth-provider';
 import {
-  TrendingUp, ShoppingCart, Package, AlertTriangle, DollarSign,
-  CreditCard, Smartphone, Building2, Receipt, Store, ArrowUp, ArrowDown,
-  Calendar, Filter, Download, Users, Wallet, PiggyBank, Target,
-  BarChart3, LineChart, PieChart, Crown, Medal, Trophy, Star,
-  ChevronDown, Search, X, Clock, RefreshCw, Loader2, Percent,
+  TrendingUp, ShoppingCart, Package, AlertTriangle, Store,
+  Calendar, Filter, X, RefreshCw, Users, Wallet, PiggyBank, Target,
+  BarChart3, LineChart, PieChart, Crown, Trophy, Percent,
   TrendingDown
 } from 'lucide-react';
 import {
@@ -18,80 +16,11 @@ import {
 } from 'recharts';
 import type { DashboardStats } from '@/types';
 import { cn } from '@/lib/utils';
-
-type Period = 'today' | 'week' | 'month' | 'custom';
-type TimelineView = 'daily' | 'weekly' | 'monthly';
-
-function getDateRange(period: Period): { startDate?: string; endDate?: string } {
-  const now = new Date();
-  const fmt = (d: Date) => d.toISOString().slice(0, 10);
-  if (period === 'today') return { startDate: fmt(now) };
-  if (period === 'week') {
-    const start = new Date(now);
-    start.setDate(start.getDate() - start.getDay());
-    return { startDate: fmt(start), endDate: fmt(now) };
-  }
-  if (period === 'month') {
-    const start = new Date(now.getFullYear(), now.getMonth(), 1);
-    return { startDate: fmt(start), endDate: fmt(now) };
-  }
-  return {};
-}
-
-const PAYMENT_ICONS: Record<string, { icon: typeof DollarSign; color: string; bg: string }> = {
-  CASH: { icon: DollarSign, color: 'text-success', bg: 'bg-success/10' },
-  YAPE: { icon: Smartphone, color: 'text-info', bg: 'bg-info/10' },
-  PLIN: { icon: Smartphone, color: 'text-info', bg: 'bg-info/10' },
-  TRANSFER: { icon: Building2, color: 'text-info', bg: 'bg-info/10' },
-  CARD: { icon: CreditCard, color: 'text-warning', bg: 'bg-warning/10' },
-  MIXED: { icon: CreditCard, color: 'text-danger', bg: 'bg-danger/10' },
-};
-
-const CHART_COLORS = ['#5B9BD5', '#4CAF50', '#FF9800', '#EF5350', '#AB47BC', '#26A69A'];
-
-function getAccentStyle(color: string): { accent: string; bg: string } {
-  if (color.includes('success')) return { accent: '#4CAF50', bg: 'rgba(76,175,80,0.15)' };
-  if (color.includes('warning')) return { accent: '#FF9800', bg: 'rgba(255,152,0,0.15)' };
-  if (color.includes('danger')) return { accent: '#EF5350', bg: 'rgba(239,83,80,0.15)' };
-  if (color.includes('info')) return { accent: '#5B9BD5', bg: 'rgba(91,155,213,0.15)' };
-  if (color.includes('primary')) return { accent: '#5B9BD5', bg: 'rgba(91,155,213,0.15)' };
-  return { accent: '#5B9BD5', bg: 'rgba(91,155,213,0.15)' };
-}
-
-function KpiCard({ title, value, subtitle, icon: Icon, color, trend, trendLabel, loading }: {
-  title: string; value: string; subtitle?: string; icon: any; color: string;
-  trend?: 'up' | 'down'; trendLabel?: string; loading?: boolean;
-}) {
-  const { accent, bg } = getAccentStyle(color);
-  return (
-    <div className={cn('stat-card', loading && 'opacity-60')} style={{ '--card-accent': accent } as React.CSSProperties}>
-      <div className="flex items-center justify-between">
-        <span className="stat-label">{title}</span>
-        <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{ background: bg, color: accent }}>
-          {Icon && <Icon size={22} />}
-        </div>
-      </div>
-      <div className={cn('stat-value', loading && 'skeleton-text !h-8 !w-2/3 mt-3')}>
-        {loading ? '' : value}
-      </div>
-      {subtitle && (
-        <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
-          {trend && (
-            <span className={trend === 'up' ? 'text-success' : 'text-danger'}>
-              {trend === 'up' ? <ArrowUp size={12} /> : <ArrowDown size={12} />}
-            </span>
-          )}
-          {subtitle}
-          {trendLabel && <span className="text-[11px] text-muted-foreground/60">{trendLabel}</span>}
-        </p>
-      )}
-    </div>
-  );
-}
-
-function SkeletonLine({ className }: { className?: string }) {
-  return <div className={cn('skeleton rounded', className)} />;
-}
+import { toast } from 'sonner';
+import { KpiCard } from '@/components/kpi-card';
+import { SkeletonLine } from '@/components/skeleton-line';
+import { getDateRange } from '@/lib/date-utils';
+import type { Period, TimelineView } from '@/lib/date-utils';
 
 export default function DashboardPage() {
   const { user } = useAuth();
@@ -124,6 +53,8 @@ export default function DashboardPage() {
       if (selectedCustomer) params.customerId = selectedCustomer;
       const data = await dashboardApi.getStats(params);
       setStats(data);
+    } catch (err: any) {
+      toast.error(err.message || 'Error al cargar estadísticas');
     } finally {
       setLoading(false);
     }
@@ -174,9 +105,9 @@ export default function DashboardPage() {
     return stats.salesByPaymentMethod.map(p => ({
       name: labels[p.method] || p.method,
       value: p.total,
-      color: p.method === 'CASH' ? '#4CAF50'
-        : p.method === 'YAPE' ? '#5B9BD5' : p.method === 'PLIN' ? '#5B9BD5'
-        : p.method === 'TRANSFER' ? '#26A69A' : p.method === 'CARD' ? '#FF9800' : '#EF5350'
+      color: p.method === 'CASH' ? '#81C784'
+        : p.method === 'YAPE' ? '#90CAF9' : p.method === 'PLIN' ? '#90CAF9'
+        : p.method === 'TRANSFER' ? '#80CBC4' : p.method === 'CARD' ? '#FFB74D' : '#EF9A9A'
     }));
   }, [stats]);
 
@@ -221,19 +152,19 @@ export default function DashboardPage() {
             {(['today', 'week', 'month'] as Period[]).map(p => (
               <button key={p} onClick={() => { setPeriod(p); setCustomStart(''); setCustomEnd(''); }}
                 className={cn('px-3 py-1.5 text-xs font-medium rounded-xl transition-all duration-200',
-                  period === p ? 'bg-[#5B9BD5] text-white font-bold shadow-[0_4px_14px_rgba(91,155,213,0.35)]' : 'text-[#BDBDBD] hover:text-[#F5F5F5] hover:bg-[rgba(255,255,255,0.06)]')}>
+                  period === p ? 'bg-[#90CAF9] text-white font-bold shadow-[0_4px_14px_rgba(144,202,249,0.35)]' : 'text-[#BDBDBD] hover:text-[#F5F5F5] hover:bg-[rgba(255,255,255,0.06)]')}>
                 {p === 'today' ? 'Hoy' : p === 'week' ? 'Semana' : 'Mes'}
               </button>
             ))}
             <button onClick={() => setPeriod('custom')}
               className={cn('px-3 py-1.5 text-xs font-medium rounded-xl transition-all duration-200',
-                period === 'custom' ? 'bg-[#5B9BD5] text-white font-bold shadow-[0_4px_14px_rgba(91,155,213,0.35)]' : 'text-[#BDBDBD] hover:text-[#F5F5F5] hover:bg-[rgba(255,255,255,0.06)]')}>
+                period === 'custom' ? 'bg-[#90CAF9] text-white font-bold shadow-[0_4px_14px_rgba(144,202,249,0.35)]' : 'text-[#BDBDBD] hover:text-[#F5F5F5] hover:bg-[rgba(255,255,255,0.06)]')}>
               <Calendar size={12} className="inline mr-1" />
               Personalizado
             </button>
           </div>
           <button onClick={() => setShowFilters(!showFilters)}
-            className={cn('btn-ghost btn-sm gap-1.5', showFilters && 'bg-[rgba(91,155,213,0.18)] text-[#5B9BD5]')}>
+            className={cn('btn-ghost btn-sm gap-1.5', showFilters && 'bg-[rgba(144,202,249,0.18)] text-[#90CAF9]')}>
             <Filter size={14} />
             Filtros
           </button>
@@ -244,8 +175,8 @@ export default function DashboardPage() {
       </div>
 
       {period === 'custom' && (
-        <div className="flex items-center gap-3 mb-6 p-4 rounded-2xl" style={{ background: 'rgba(91,155,213,0.08)', border: '1px solid rgba(91,155,213,0.15)' }}>
-          <Calendar size={16} style={{ color: '#5B9BD5' }} />
+        <div className="flex items-center gap-3 mb-6 p-4 rounded-2xl" style={{ background: 'rgba(144,202,249,0.08)', border: '1px solid rgba(144,202,249,0.15)' }}>
+          <Calendar size={16} style={{ color: '#90CAF9' }} />
           <input type="date" value={customStart} onChange={e => setCustomStart(e.target.value)}
             className="input-field !w-auto !h-9 text-sm" />
           <span className="text-muted-foreground text-xs">a</span>
@@ -256,7 +187,7 @@ export default function DashboardPage() {
       )}
 
       {showFilters && (
-        <div className="flex items-center gap-3 mb-6 p-4 rounded-2xl border flex-wrap" style={{ background: 'rgba(91,155,213,0.08)', border: '1px solid rgba(91,155,213,0.15)' }}>
+        <div className="flex items-center gap-3 mb-6 p-4 rounded-2xl border flex-wrap" style={{ background: 'rgba(144,202,249,0.08)', border: '1px solid rgba(144,202,249,0.15)' }}>
           <span className="text-xs font-medium text-muted-foreground flex items-center gap-1">
             <Filter size={12} /> Filtros:
           </span>
@@ -316,7 +247,7 @@ export default function DashboardPage() {
             {(['daily', 'weekly', 'monthly'] as TimelineView[]).map(v => (
               <button key={v} onClick={() => setTimelineView(v)}
                 className={cn('px-3 py-1 text-xs font-medium rounded-lg transition-all',
-                  timelineView === v ? 'bg-[rgba(91,155,213,0.18)] text-[#5B9BD5]' : 'text-[#BDBDBD] hover:text-[#F5F5F5]')}>
+                  timelineView === v ? 'bg-[rgba(144,202,249,0.18)] text-[#90CAF9]' : 'text-[#BDBDBD] hover:text-[#F5F5F5]')}>
                 {v === 'daily' ? 'Diario' : v === 'weekly' ? 'Semanal' : 'Mensual'}
               </button>
             ))}
@@ -333,7 +264,7 @@ export default function DashboardPage() {
                 <Tooltip
                   contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px', fontSize: '13px' }}
                   formatter={(value: any) => formatCurrency(value)} />
-                <Line type="monotone" dataKey="revenue" stroke="#5B9BD5" strokeWidth={2.5} dot={{ r: 3, fill: '#5B9BD5' }} activeDot={{ r: 5, fill: '#5B9BD5' }} />
+                <Line type="monotone" dataKey="revenue" stroke="#90CAF9" strokeWidth={2.5} dot={{ r: 3, fill: '#90CAF9' }} activeDot={{ r: 5, fill: '#90CAF9' }} />
               </ReLineChart>
             </ResponsiveContainer>
           ) : (
@@ -387,8 +318,8 @@ export default function DashboardPage() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div className="card-modern p-6">
               {stats.productsRanking.mostSold && (
-                <div className="flex items-center gap-4 p-4 mb-4 rounded-2xl" style={{ background: 'rgba(255,152,0,0.1)', border: '1px solid rgba(255,152,0,0.2)' }}>
-                  <Trophy size={28} style={{ color: '#FF9800' }} />
+                <div className="flex items-center gap-4 p-4 mb-4 rounded-2xl" style={{ background: 'rgba(255,183,77,0.1)', border: '1px solid rgba(255,183,77,0.2)' }}>
+                  <Trophy size={28} style={{ color: '#FFB74D' }} />
                   <div>
                     <p className="text-xs text-muted-foreground">Más vendido</p>
                     <p className="font-bold text-base">{stats.productsRanking.mostSold.name}</p>
@@ -406,7 +337,7 @@ export default function DashboardPage() {
                     <YAxis type="category" dataKey="name" tick={{ fontSize: 10 }} width={120} stroke="hsl(var(--muted-foreground))" />
                     <Tooltip contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px', fontSize: '13px' }}
                       formatter={(value: any) => formatCurrency(value)} />
-                    <Bar dataKey="Ingreso" fill="#4CAF50" radius={[0, 4, 4, 0]} />
+                    <Bar dataKey="Ingreso" fill="#81C784" radius={[0, 4, 4, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               ) : (
@@ -467,7 +398,7 @@ export default function DashboardPage() {
                     <YAxis type="category" dataKey="name" tick={{ fontSize: 10 }} width={120} stroke="hsl(var(--muted-foreground))" />
                     <Tooltip contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px', fontSize: '13px' }}
                       formatter={(value: any) => formatCurrency(value)} />
-                    <Bar dataKey="Gastos" fill="#5B9BD5" radius={[0, 4, 4, 0]} />
+                    <Bar dataKey="Gastos" fill="#90CAF9" radius={[0, 4, 4, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               ) : (
@@ -506,7 +437,7 @@ export default function DashboardPage() {
       {stats?.bestDay && (
         <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="card-modern p-5 flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ background: 'rgba(76,175,80,0.15)', color: '#4CAF50' }}>
+            <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ background: 'rgba(129,199,132,0.15)', color: '#81C784' }}>
               <Calendar size={24} />
             </div>
             <div>
@@ -517,7 +448,7 @@ export default function DashboardPage() {
           </div>
           {stats.bestWeek && (
             <div className="card-modern p-5 flex items-center gap-4">
-              <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ background: 'rgba(91,155,213,0.15)', color: '#5B9BD5' }}>
+              <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ background: 'rgba(144,202,249,0.15)', color: '#90CAF9' }}>
                 <BarChart3 size={24} />
               </div>
               <div>
@@ -529,7 +460,7 @@ export default function DashboardPage() {
           )}
           {stats.bestMonth && (
             <div className="card-modern p-5 flex items-center gap-4">
-              <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ background: 'rgba(91,155,213,0.15)', color: '#5B9BD5' }}>
+              <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ background: 'rgba(144,202,249,0.15)', color: '#90CAF9' }}>
                 <Target size={24} />
               </div>
               <div>
@@ -551,20 +482,20 @@ export default function DashboardPage() {
           {loading ? (
             <SkeletonLine className="h-16 w-full" />
           ) : stats?.cashRegisterOpen ? (
-            <div className="flex items-center gap-4 p-5 rounded-2xl" style={{ background: 'rgba(76,175,80,0.1)', border: '1px solid rgba(76,175,80,0.25)' }}>
-              <div className="w-3 h-3 rounded-full" style={{ background: '#4CAF50' }} />
+            <div className="flex items-center gap-4 p-5 rounded-2xl" style={{ background: 'rgba(129,199,132,0.1)', border: '1px solid rgba(129,199,132,0.25)' }}>
+              <div className="w-3 h-3 rounded-full" style={{ background: '#81C784' }} />
               <div>
-                <p className="text-sm font-semibold" style={{ color: '#4CAF50' }}>Caja Abierta</p>
+                <p className="text-sm font-semibold" style={{ color: '#81C784' }}>Caja Abierta</p>
                 <p className="text-xs text-muted-foreground mt-0.5">
                   Abierta por {stats.openRegister?.openedBy?.firstName} {stats.openRegister?.openedBy?.lastName}
                 </p>
               </div>
             </div>
           ) : (
-            <div className="flex items-center gap-4 p-5 rounded-2xl" style={{ background: 'rgba(255,152,0,0.1)', border: '1px solid rgba(255,152,0,0.25)' }}>
-              <div className="w-3 h-3 rounded-full" style={{ background: '#FF9800' }} />
+            <div className="flex items-center gap-4 p-5 rounded-2xl" style={{ background: 'rgba(255,183,77,0.1)', border: '1px solid rgba(255,183,77,0.25)' }}>
+              <div className="w-3 h-3 rounded-full" style={{ background: '#FFB74D' }} />
               <div>
-                <p className="text-sm font-semibold" style={{ color: '#FF9800' }}>Caja Cerrada</p>
+                <p className="text-sm font-semibold" style={{ color: '#FFB74D' }}>Caja Cerrada</p>
                 <p className="text-xs text-muted-foreground mt-0.5">Abrir caja para comenzar a vender</p>
               </div>
             </div>

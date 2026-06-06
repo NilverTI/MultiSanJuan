@@ -48,20 +48,20 @@ const config: Config = {
           accent: 'hsl(var(--sidebar-accent))',
         },
         success: {
-          DEFAULT: '#4CAF50',
-          foreground: '#FFFFFF',
+          DEFAULT: '#81C784',
+          foreground: '#0B1B2B',
         },
         warning: {
-          DEFAULT: '#FF9800',
-          foreground: '#FFFFFF',
+          DEFAULT: '#FFB74D',
+          foreground: '#0B1B2B',
         },
         danger: {
-          DEFAULT: '#EF5350',
-          foreground: '#FFFFFF',
+          DEFAULT: '#EF9A9A',
+          foreground: '#0B1B2B',
         },
         info: {
-          DEFAULT: '#5B9BD5',
-          foreground: '#FFFFFF',
+          DEFAULT: '#90CAF9',
+          foreground: '#0B1B2B',
         },
       },
       borderRadius: {

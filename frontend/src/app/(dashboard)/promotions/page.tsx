@@ -24,7 +24,7 @@ export default function PromotionsPage() {
     isActive: true
   });
 
-  const load = () => { setLoading(true); promotionsApi.getAll().then(setPromotions).finally(() => setLoading(false)); };
+  const load = () => { setLoading(true); promotionsApi.getAll().then(setPromotions).catch(err => toast.error(err.message)).finally(() => setLoading(false)); };
   useEffect(() => { load(); }, []);
 
   const handleSubmit = async () => {

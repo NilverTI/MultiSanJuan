@@ -2,100 +2,32 @@
 
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import { reportsApi } from '@/services/api';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, translatePaymentMethod } from '@/lib/utils';
 import {
   TrendingUp, ShoppingCart, Package, AlertTriangle, DollarSign,
-  CreditCard, Smartphone, Building2, Receipt, Store,
-  Calendar, Filter, Download, Users, Wallet, PiggyBank, Target,
-  BarChart3, LineChart, PieChart as PieChartIcon, Crown, Medal, Trophy,
-  ChevronDown, Search, X, RefreshCw, Loader2, Percent,
-  TrendingDown, ArrowUp, ArrowDown, Box, ClipboardList, AlertCircle,
-  CircleDollarSign, Layers, Truck, Settings, FileSpreadsheet,
-  EyeOff, Eye, Zap, Clock, Banana, Scale, Warehouse, Star,
+  Receipt, Calendar, Users, Wallet, PiggyBank,
+  BarChart3, LineChart, PieChart as PieChartIcon, Crown,
+  RefreshCw, Percent, TrendingDown, Box, ClipboardList, AlertCircle,
+  CheckCircle, CircleDollarSign, Layers, Truck, Warehouse, Star,
 } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
   Line, LineChart as ReLineChart, PieChart, Pie, Cell, Legend,
 } from 'recharts';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { KpiCard } from '@/components/kpi-card';
+import { Badge } from '@/components/badge';
+import { SkeletonLine } from '@/components/skeleton-line';
+import { getDateRange } from '@/lib/date-utils';
+import type { Period, TimelineView } from '@/lib/date-utils';
+import { CHART_COLORS } from '@/lib/chart-helpers';
 
-type Period = 'today' | 'week' | 'month' | 'year' | 'custom';
 type Tab = 'general' | 'ventas' | 'productos' | 'clientes' | 'inventario' | 'finanzas';
-type TimelineView = 'daily' | 'weekly' | 'monthly';
 type StockFilter = 'all' | 'low' | 'out' | 'over';
 
-function getDateRange(period: Period): { startDate?: string; endDate?: string } {
-  const now = new Date();
-  const fmt = (d: Date) => d.toISOString().slice(0, 10);
-  if (period === 'today') return { startDate: fmt(now) };
-  if (period === 'week') {
-    const start = new Date(now);
-    start.setDate(start.getDate() - start.getDay());
-    return { startDate: fmt(start), endDate: fmt(now) };
-  }
-  if (period === 'month') {
-    const start = new Date(now.getFullYear(), now.getMonth(), 1);
-    return { startDate: fmt(start), endDate: fmt(now) };
-  }
-  if (period === 'year') {
-    const start = new Date(now.getFullYear(), 0, 1);
-    return { startDate: fmt(start), endDate: fmt(now) };
-  }
-  return {};
-}
-
-const PAYMENT_LABELS: Record<string, string> = {
-  CASH: 'Efectivo', YAPE: 'Yape', PLIN: 'Plin', TRANSFER: 'Transferencia',
-  CARD: 'Tarjeta', MIXED: 'Mixto',
-};
-
-const CHART_COLORS = ['#5B9BD5', '#4CAF50', '#FF9800', '#EF5350', '#AB47BC', '#26A69A'];
-
-function getAccentStyle(color: string): { accent: string; bg: string } {
-  if (color.includes('success')) return { accent: '#4CAF50', bg: 'rgba(76,175,80,0.15)' };
-  if (color.includes('warning')) return { accent: '#FF9800', bg: 'rgba(255,152,0,0.15)' };
-  if (color.includes('danger')) return { accent: '#EF5350', bg: 'rgba(239,83,80,0.15)' };
-  if (color.includes('info')) return { accent: '#5B9BD5', bg: 'rgba(91,155,213,0.15)' };
-  return { accent: '#5B9BD5', bg: 'rgba(91,155,213,0.15)' };
-}
-
-function KpiCard({ title, value, subtitle, icon: Icon, color, trend, loading }: {
-  title: string; value: string; subtitle?: string; icon: any; color: string;
-  trend?: 'up' | 'down'; loading?: boolean;
-}) {
-  const { accent, bg } = getAccentStyle(color);
-  return (
-    <div className={cn('stat-card', loading && 'opacity-60')} style={{ '--card-accent': accent } as React.CSSProperties}>
-      <div className="flex items-center justify-between">
-        <span className="stat-label">{title}</span>
-        <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{ background: bg, color: accent }}>
-          {Icon && <Icon size={22} />}
-        </div>
-      </div>
-      <div className={cn('stat-value', loading && 'skeleton-text !h-8 !w-2/3 mt-3')}>{loading ? '' : value}</div>
-      {subtitle && <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">{subtitle}</p>}
-    </div>
-  );
-}
-
-function Badge({ status }: { status: 'ok' | 'low' | 'out' | 'over' }) {
-  const styles: Record<string, string> = {
-    ok: 'badge-success',
-    low: 'badge-warning',
-    out: 'badge-danger',
-    over: 'badge-info',
-  };
-  const labels: Record<string, string> = {
-    ok: 'Disponible',
-    low: 'Bajo Stock',
-    out: 'Sin Stock',
-    over: 'Sobrestock',
-  };
-  return <span className={cn('badge', styles[status])}>{labels[status]}</span>;
-}
-
-const TABS: { key: Tab; label: string; icon: any }[] = [
+const TABS: { key: Tab; label: string; icon: LucideIcon }[] = [
   { key: 'general', label: 'General', icon: BarChart3 },
   { key: 'ventas', label: 'Ventas', icon: TrendingUp },
   { key: 'productos', label: 'Productos', icon: Package },
@@ -103,10 +35,6 @@ const TABS: { key: Tab; label: string; icon: any }[] = [
   { key: 'inventario', label: 'Inventario / Stock', icon: Warehouse },
   { key: 'finanzas', label: 'Finanzas', icon: CircleDollarSign },
 ];
-
-function SkeletonLine({ className }: { className?: string }) {
-  return <div className={cn('skeleton rounded', className)} />;
-}
 
 export default function ReportsPage() {
   const [activeTab, setActiveTab] = useState<Tab>('general');
@@ -212,7 +140,7 @@ export default function ReportsPage() {
   const paymentChartData = useMemo(() => {
     if (!salesData?.summary?.byPaymentMethod) return [];
     return Object.entries(salesData.summary.byPaymentMethod).map(([method, total]) => ({
-      name: PAYMENT_LABELS[method] || method,
+      name: translatePaymentMethod(method as string),
       value: total as number,
     }));
   }, [salesData]);
@@ -262,10 +190,10 @@ export default function ReportsPage() {
 
   const financialSummary = financialData;
 
-  const bestDay: any = useMemo(() => {
+  const bestDay = useMemo(() => {
     if (!timelineData.length) return null;
-    return timelineData.reduce((a: any, b: any) => (a.revenue > b.revenue ? a : b));
-  }, [timelineData]);
+    return timelineData.reduce((a, b) => (a.revenue > b.revenue ? a : b));
+  }, [timelineData]) as { date?: string; revenue: number; count: number } | null;
 
   const filteredProducts = useMemo(() => {
     if (!inventoryData?.products) return [];
@@ -295,13 +223,13 @@ export default function ReportsPage() {
             {(['today', 'week', 'month', 'year'] as Period[]).map(p => (
               <button key={p} onClick={() => { setPeriod(p); setCustomStart(''); setCustomEnd(''); }}
                 className={cn('px-3 py-1.5 text-xs font-medium rounded-xl transition-all duration-200',
-                  period === p ? 'bg-[#5B9BD5] text-white font-bold shadow-[0_4px_14px_rgba(91,155,213,0.35)]' : 'text-[#BDBDBD] hover:text-[#F5F5F5] hover:bg-[rgba(255,255,255,0.06)]')}>
+                  period === p ? 'bg-[#90CAF9] text-white font-bold shadow-[0_4px_14px_rgba(144,202,249,0.35)]' : 'text-[#BDBDBD] hover:text-[#F5F5F5] hover:bg-[rgba(255,255,255,0.06)]')}>
                 {p === 'today' ? 'Hoy' : p === 'week' ? 'Semana' : p === 'month' ? 'Mes' : 'Año'}
               </button>
             ))}
             <button onClick={() => setPeriod('custom')}
               className={cn('px-3 py-1.5 text-xs font-medium rounded-xl transition-all duration-200',
-                period === 'custom' ? 'bg-[#5B9BD5] text-white font-bold shadow-[0_4px_14px_rgba(91,155,213,0.35)]' : 'text-[#BDBDBD] hover:text-[#F5F5F5] hover:bg-[rgba(255,255,255,0.06)]')}>
+                period === 'custom' ? 'bg-[#90CAF9] text-white font-bold shadow-[0_4px_14px_rgba(144,202,249,0.35)]' : 'text-[#BDBDBD] hover:text-[#F5F5F5] hover:bg-[rgba(255,255,255,0.06)]')}>
               <Calendar size={12} className="inline mr-1" />Personalizado
             </button>
           </div>
@@ -312,8 +240,8 @@ export default function ReportsPage() {
       </div>
 
       {period === 'custom' && (
-        <div className="flex items-center gap-3 mb-6 p-4 rounded-2xl" style={{ background: 'rgba(91,155,213,0.08)', border: '1px solid rgba(91,155,213,0.15)' }}>
-          <Calendar size={16} style={{ color: '#5B9BD5' }} />
+        <div className="flex items-center gap-3 mb-6 p-4 rounded-2xl" style={{ background: 'rgba(144,202,249,0.08)', border: '1px solid rgba(144,202,249,0.15)' }}>
+          <Calendar size={16} style={{ color: '#90CAF9' }} />
           <input type="date" value={customStart} onChange={e => setCustomStart(e.target.value)}
             className="input-field !w-auto !h-9 text-sm" />
           <span className="text-muted-foreground text-xs">a</span>
@@ -329,7 +257,7 @@ export default function ReportsPage() {
           <button key={tab.key} onClick={() => setActiveTab(tab.key)}
             className={cn('flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-xl transition-all whitespace-nowrap',
               activeTab === tab.key
-                ? 'bg-[#5B9BD5] text-white shadow-[0_4px_14px_rgba(91,155,213,0.35)]'
+                ? 'bg-[#90CAF9] text-white shadow-[0_4px_14px_rgba(144,202,249,0.35)]'
                 : 'text-[#BDBDBD] hover:text-[#F5F5F5] hover:bg-[rgba(255,255,255,0.06)]')}>
             <tab.icon size={16} />
             {tab.label}
@@ -379,7 +307,7 @@ export default function ReportsPage() {
                 {(['daily', 'weekly', 'monthly'] as TimelineView[]).map(v => (
                   <button key={v} onClick={() => setTimelineView(v)}
                     className={cn('px-3 py-1 text-xs font-medium rounded-lg transition-all',
-                      timelineView === v ? 'bg-[rgba(91,155,213,0.18)] text-[#5B9BD5]' : 'text-[#BDBDBD] hover:text-[#F5F5F5]')}>
+                      timelineView === v ? 'bg-[rgba(144,202,249,0.18)] text-[#90CAF9]' : 'text-[#BDBDBD] hover:text-[#F5F5F5]')}>
                     {v === 'daily' ? 'Diario' : v === 'weekly' ? 'Semanal' : 'Mensual'}
                   </button>
                 ))}
@@ -394,7 +322,7 @@ export default function ReportsPage() {
                       <YAxis tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
                       <Tooltip contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px', fontSize: '13px' }}
                         formatter={(value: any) => formatCurrency(value)} />
-                      <Line type="monotone" dataKey="revenue" stroke="#5B9BD5" strokeWidth={2.5} dot={{ r: 3, fill: '#5B9BD5' }} activeDot={{ r: 5, fill: '#5B9BD5' }} />
+                      <Line type="monotone" dataKey="revenue" stroke="#90CAF9" strokeWidth={2.5} dot={{ r: 3, fill: '#90CAF9' }} activeDot={{ r: 5, fill: '#90CAF9' }} />
                   </ReLineChart>
                 </ResponsiveContainer>
               ) : (
@@ -442,33 +370,33 @@ export default function ReportsPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {stockAlerts.noStockCount > 0 && (
                 <div className="card-modern p-5 flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ background: 'rgba(239,83,80,0.15)', color: '#EF5350' }}>
+                  <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ background: 'rgba(239,154,154,0.15)', color: '#EF9A9A' }}>
                     <AlertCircle size={24} />
                   </div>
                   <div>
-                    <p className="text-lg font-bold" style={{ color: '#EF5350' }}>{stockAlerts.noStockCount}</p>
+                    <p className="text-lg font-bold" style={{ color: '#EF9A9A' }}>{stockAlerts.noStockCount}</p>
                     <p className="text-xs text-muted-foreground">Productos sin stock — requieren reposición urgente</p>
                   </div>
                 </div>
               )}
               {stockAlerts.lowStockCount > 0 && (
                 <div className="card-modern p-5 flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ background: 'rgba(255,152,0,0.15)', color: '#FF9800' }}>
+                  <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ background: 'rgba(255,183,77,0.15)', color: '#FFB74D' }}>
                     <AlertTriangle size={24} />
                   </div>
                   <div>
-                    <p className="text-lg font-bold" style={{ color: '#FF9800' }}>{stockAlerts.lowStockCount}</p>
+                    <p className="text-lg font-bold" style={{ color: '#FFB74D' }}>{stockAlerts.lowStockCount}</p>
                     <p className="text-xs text-muted-foreground">Productos con bajo stock — próximos a agotarse</p>
                   </div>
                 </div>
               )}
               {stockAlerts.overStockCount > 0 && (
                 <div className="card-modern p-5 flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ background: 'rgba(91,155,213,0.15)', color: '#5B9BD5' }}>
+                  <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ background: 'rgba(144,202,249,0.15)', color: '#90CAF9' }}>
                     <Box size={24} />
                   </div>
                   <div>
-                    <p className="text-lg font-bold" style={{ color: '#5B9BD5' }}>{stockAlerts.overStockCount}</p>
+                    <p className="text-lg font-bold" style={{ color: '#90CAF9' }}>{stockAlerts.overStockCount}</p>
                     <p className="text-xs text-muted-foreground">Productos con sobrestock — mucha inversión detenida</p>
                   </div>
                 </div>
@@ -495,7 +423,7 @@ export default function ReportsPage() {
           {bestDay && (
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="card-modern p-5 flex items-center gap-4">
-                <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ background: 'rgba(76,175,80,0.15)', color: '#4CAF50' }}>
+                <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ background: 'rgba(129,199,132,0.15)', color: '#81C784' }}>
                   <Calendar size={24} />
                 </div>
                 <div>
@@ -505,7 +433,7 @@ export default function ReportsPage() {
                 </div>
               </div>
               <div className="card-modern p-5 flex items-center gap-4">
-                <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ background: 'rgba(91,155,213,0.15)', color: '#5B9BD5' }}>
+                <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ background: 'rgba(144,202,249,0.15)', color: '#90CAF9' }}>
                   <BarChart3 size={24} />
                 </div>
                 <div>
@@ -515,7 +443,7 @@ export default function ReportsPage() {
                 </div>
               </div>
               <div className="card-modern p-5 flex items-center gap-4">
-                <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ background: 'rgba(255,152,0,0.15)', color: '#FF9800' }}>
+                <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ background: 'rgba(255,183,77,0.15)', color: '#FFB74D' }}>
                   <Users size={24} />
                 </div>
                 <div>
@@ -536,7 +464,7 @@ export default function ReportsPage() {
               {(['daily', 'weekly', 'monthly'] as TimelineView[]).map(v => (
                 <button key={v} onClick={() => setTimelineView(v)}
                   className={cn('px-3 py-1 text-xs font-medium rounded-lg transition-all',
-                    timelineView === v ? 'bg-[rgba(91,155,213,0.18)] text-[#5B9BD5]' : 'text-[#BDBDBD] hover:text-[#F5F5F5]')}>
+                    timelineView === v ? 'bg-[rgba(144,202,249,0.18)] text-[#90CAF9]' : 'text-[#BDBDBD] hover:text-[#F5F5F5]')}>
                   {v === 'daily' ? 'Por Día' : v === 'weekly' ? 'Por Semana' : 'Por Mes'}
                 </button>
               ))}
@@ -551,7 +479,7 @@ export default function ReportsPage() {
                     <YAxis tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
                     <Tooltip contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px', fontSize: '13px' }}
                       formatter={(value: any) => formatCurrency(value)} />
-                      <Line type="monotone" dataKey="revenue" stroke="#5B9BD5" strokeWidth={2.5} dot={{ r: 3, fill: '#5B9BD5' }} activeDot={{ r: 5, fill: '#5B9BD5' }} />
+                      <Line type="monotone" dataKey="revenue" stroke="#90CAF9" strokeWidth={2.5} dot={{ r: 3, fill: '#90CAF9' }} activeDot={{ r: 5, fill: '#90CAF9' }} />
                   </ReLineChart>
                 </ResponsiveContainer>
               ) : <div className="flex items-center justify-center h-[250px] text-muted-foreground text-sm">Sin datos</div>}
@@ -572,7 +500,7 @@ export default function ReportsPage() {
                       <YAxis type="category" dataKey="name" tick={{ fontSize: 10 }} width={120} stroke="hsl(var(--muted-foreground))" />
                       <Tooltip contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px', fontSize: '13px' }}
                         formatter={(value: any, name: any) => name === 'qty' ? `${value} uds` : formatCurrency(value)} />
-                      <Bar dataKey="qty" fill="#5B9BD5" radius={[0, 4, 4, 0]} />
+                      <Bar dataKey="qty" fill="#90CAF9" radius={[0, 4, 4, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 ) : <div className="flex items-center justify-center h-[200px] text-muted-foreground text-sm">Sin datos</div>}
@@ -589,7 +517,7 @@ export default function ReportsPage() {
                     {Object.entries(salesData.summary.byUser).map(([name, data]: [string, any]) => (
                       <div key={name} className="flex items-center justify-between py-3 px-2 hover:bg-muted/20 transition-colors">
                         <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-[rgba(91,155,213,0.18)] flex items-center justify-center text-xs font-bold text-[#5B9BD5]">
+                          <div className="w-8 h-8 rounded-full bg-[rgba(144,202,249,0.18)] flex items-center justify-center text-xs font-bold text-[#90CAF9]">
                             {name[0]}
                           </div>
                           <span className="text-sm font-medium">{name}</span>
@@ -635,7 +563,7 @@ export default function ReportsPage() {
                     <YAxis type="category" dataKey="name" tick={{ fontSize: 10 }} width={130} stroke="hsl(var(--muted-foreground))" />
                     <Tooltip contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px', fontSize: '13px' }}
                       formatter={(value: any, name: any) => name === 'qty' ? `${value} uds` : formatCurrency(value)} />
-                    <Bar dataKey="revenue" fill="#4CAF50" radius={[0, 4, 4, 0]} />
+                    <Bar dataKey="revenue" fill="#81C784" radius={[0, 4, 4, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               ) : <div className="flex items-center justify-center h-[250px] text-muted-foreground text-sm">Sin datos de ventas</div>}
@@ -722,7 +650,7 @@ export default function ReportsPage() {
                       <YAxis type="category" dataKey="name" tick={{ fontSize: 10 }} width={120} stroke="hsl(var(--muted-foreground))" />
                       <Tooltip contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px', fontSize: '13px' }}
                         formatter={(value: any) => formatCurrency(value)} />
-                      <Bar dataKey="Gastos" fill="#5B9BD5" radius={[0, 4, 4, 0]} />
+                      <Bar dataKey="Gastos" fill="#90CAF9" radius={[0, 4, 4, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 ) : <div className="flex items-center justify-center h-[220px] text-muted-foreground text-sm">Sin datos</div>}
@@ -834,29 +762,29 @@ export default function ReportsPage() {
            {stockAlerts && (stockAlerts.noStockCount > 0 || stockAlerts.lowStockCount > 0) && (
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="card-modern p-5 flex items-center gap-4">
-                <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0" style={{ background: 'rgba(239,83,80,0.15)', color: '#EF5350' }}>
+                <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0" style={{ background: 'rgba(239,154,154,0.15)', color: '#EF9A9A' }}>
                   <AlertCircle size={24} />
                 </div>
                 <div>
-                  <p className="text-lg font-bold" style={{ color: '#EF5350' }}>{stockAlerts.noStockCount}</p>
+                  <p className="text-lg font-bold" style={{ color: '#EF9A9A' }}>{stockAlerts.noStockCount}</p>
                   <p className="text-xs text-muted-foreground">Sin stock — reposición urgente</p>
                 </div>
               </div>
               <div className="card-modern p-5 flex items-center gap-4">
-                <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0" style={{ background: 'rgba(255,152,0,0.15)', color: '#FF9800' }}>
+                <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0" style={{ background: 'rgba(255,183,77,0.15)', color: '#FFB74D' }}>
                   <AlertTriangle size={24} />
                 </div>
                 <div>
-                  <p className="text-lg font-bold" style={{ color: '#FF9800' }}>{stockAlerts.lowStockCount}</p>
+                  <p className="text-lg font-bold" style={{ color: '#FFB74D' }}>{stockAlerts.lowStockCount}</p>
                   <p className="text-xs text-muted-foreground">Bajo stock — próximos a agotarse</p>
                 </div>
               </div>
               <div className="card-modern p-5 flex items-center gap-4">
-                <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0" style={{ background: 'rgba(91,155,213,0.15)', color: '#5B9BD5' }}>
+                <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0" style={{ background: 'rgba(144,202,249,0.15)', color: '#90CAF9' }}>
                   <Box size={24} />
                 </div>
                 <div>
-                  <p className="text-lg font-bold" style={{ color: '#5B9BD5' }}>{stockAlerts.overStockCount}</p>
+                  <p className="text-lg font-bold" style={{ color: '#90CAF9' }}>{stockAlerts.overStockCount}</p>
                   <p className="text-xs text-muted-foreground">Sobrestock — mucha inversión detenida</p>
                 </div>
               </div>
@@ -867,7 +795,7 @@ export default function ReportsPage() {
             {([['all', 'Todos'], ['low', 'Bajo Stock'], ['out', 'Sin Stock'], ['over', 'Sobrestock']] as [StockFilter, string][]).map(([key, label]) => (
               <button key={key} onClick={() => setStockFilter(key)}
                 className={cn('px-3 py-1.5 text-xs font-medium rounded-lg transition-all',
-                  stockFilter === key ? 'bg-[rgba(91,155,213,0.18)] text-[#5B9BD5]' : 'text-[#BDBDBD] hover:text-[#F5F5F5]')}>
+                  stockFilter === key ? 'bg-[rgba(144,202,249,0.18)] text-[#90CAF9]' : 'text-[#BDBDBD] hover:text-[#F5F5F5]')}>
                 {label}
               </button>
             ))}
@@ -1015,20 +943,20 @@ export default function ReportsPage() {
             </h3>
             <div className="flex items-center justify-center">
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 w-full max-w-2xl">
-                <div className="text-center p-6 rounded-2xl" style={{ background: 'rgba(76,175,80,0.1)', border: '1px solid rgba(76,175,80,0.2)' }}>
-                  <DollarSign size={28} style={{ color: '#4CAF50' }} className="mx-auto mb-2" />
+                <div className="text-center p-6 rounded-2xl" style={{ background: 'rgba(129,199,132,0.1)', border: '1px solid rgba(129,199,132,0.2)' }}>
+                  <DollarSign size={28} style={{ color: '#81C784' }} className="mx-auto mb-2" />
                   <p className="text-xs text-muted-foreground uppercase font-semibold">Ingresos</p>
-                  <p className="text-2xl font-bold mt-1" style={{ color: '#4CAF50' }}>{formatCurrency(financialSummary?.totalRevenue || 0)}</p>
+                  <p className="text-2xl font-bold mt-1" style={{ color: '#81C784' }}>{formatCurrency(financialSummary?.totalRevenue || 0)}</p>
                 </div>
-                <div className="text-center p-6 rounded-2xl" style={{ background: 'rgba(239,83,80,0.1)', border: '1px solid rgba(239,83,80,0.2)' }}>
-                  <TrendingDown size={28} style={{ color: '#EF5350' }} className="mx-auto mb-2" />
+                <div className="text-center p-6 rounded-2xl" style={{ background: 'rgba(239,154,154,0.1)', border: '1px solid rgba(239,154,154,0.2)' }}>
+                  <TrendingDown size={28} style={{ color: '#EF9A9A' }} className="mx-auto mb-2" />
                   <p className="text-xs text-muted-foreground uppercase font-semibold">Costos</p>
-                  <p className="text-2xl font-bold mt-1" style={{ color: '#EF5350' }}>{formatCurrency(financialSummary?.totalCost || 0)}</p>
+                  <p className="text-2xl font-bold mt-1" style={{ color: '#EF9A9A' }}>{formatCurrency(financialSummary?.totalCost || 0)}</p>
                 </div>
-                <div className="text-center p-6 rounded-2xl" style={{ background: 'rgba(91,155,213,0.1)', border: '1px solid rgba(91,155,213,0.2)' }}>
-                  <PiggyBank size={28} className="mx-auto mb-2" style={{ color: (financialSummary?.netProfit || 0) >= 0 ? '#4CAF50' : '#EF5350' }} />
+                <div className="text-center p-6 rounded-2xl" style={{ background: 'rgba(144,202,249,0.1)', border: '1px solid rgba(144,202,249,0.2)' }}>
+                  <PiggyBank size={28} className="mx-auto mb-2" style={{ color: (financialSummary?.netProfit || 0) >= 0 ? '#81C784' : '#EF9A9A' }} />
                   <p className="text-xs text-muted-foreground uppercase font-semibold">Utilidad Neta</p>
-                  <p className="text-2xl font-bold mt-1" style={{ color: (financialSummary?.netProfit || 0) >= 0 ? '#4CAF50' : '#EF5350' }}>
+                  <p className="text-2xl font-bold mt-1" style={{ color: (financialSummary?.netProfit || 0) >= 0 ? '#81C784' : '#EF9A9A' }}>
                     {formatCurrency(financialSummary?.netProfit || 0)}
                   </p>
                 </div>
@@ -1036,10 +964,10 @@ export default function ReportsPage() {
             </div>
 
             {financialSummary && (
-              <div className="mt-6 p-5 rounded-2xl" style={{ background: 'rgba(91,155,213,0.08)', border: '1px solid rgba(255,255,255,0.08)' }}>
+              <div className="mt-6 p-5 rounded-2xl" style={{ background: 'rgba(144,202,249,0.08)', border: '1px solid rgba(255,255,255,0.08)' }}>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: financialSummary.netProfit >= 0 ? 'rgba(76,175,80,0.15)' : 'rgba(239,83,80,0.15)', color: financialSummary.netProfit >= 0 ? '#4CAF50' : '#EF5350' }}>
+                    <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: financialSummary.netProfit >= 0 ? 'rgba(129,199,132,0.15)' : 'rgba(239,154,154,0.15)', color: financialSummary.netProfit >= 0 ? '#81C784' : '#EF9A9A' }}>
                       {financialSummary.netProfit >= 0
                         ? <TrendingUp size={20} />
                         : <TrendingDown size={20} />}
@@ -1053,7 +981,7 @@ export default function ReportsPage() {
                       </p>
                     </div>
                   </div>
-                  <div className="text-lg font-bold" style={{ color: financialSummary.netProfit >= 0 ? '#4CAF50' : '#EF5350' }}>
+                  <div className="text-lg font-bold" style={{ color: financialSummary.netProfit >= 0 ? '#81C784' : '#EF9A9A' }}>
                     {financialSummary.netProfit >= 0 ? 'Rentable' : 'No rentable'}
                   </div>
                 </div>
@@ -1066,4 +994,4 @@ export default function ReportsPage() {
   );
 }
 
-function CheckCircle(props: any) { return <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>; }
+

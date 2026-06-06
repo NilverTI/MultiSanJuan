@@ -36,6 +36,7 @@ export default function ProductsPage() {
     setLoading(true);
     productsApi.getAll({ page, limit, search })
       .then((res: any) => { setProducts(res.data); setTotal(res.total); })
+      .catch(err => toast.error(err.message))
       .finally(() => setLoading(false));
   };
 

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { saleNotesApi } from '@/services/api';
 import { formatCurrency, formatDate, getStatusColor, translateStatus } from '@/lib/utils';
+import { toast } from 'sonner';
 import { ClipboardList, Plus, Loader2, FileText } from 'lucide-react';
 
 export default function SaleNotesPage() {
@@ -12,7 +13,7 @@ export default function SaleNotesPage() {
 
   useEffect(() => {
     setLoading(true);
-    saleNotesApi.getAll({ page, limit: 20 }).then((res: any) => setNotes(res.data || [])).finally(() => setLoading(false));
+    saleNotesApi.getAll({ page, limit: 20 }).then((res: any) => setNotes(res.data || [])).catch(err => toast.error(err.message)).finally(() => setLoading(false));
   }, [page]);
 
   return (

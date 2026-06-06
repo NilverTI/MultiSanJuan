@@ -17,7 +17,7 @@ export default function SettingsPage() {
       const v: Record<string, string> = {};
       data.forEach((s: any) => { v[s.key] = s.value; });
       setValues(v);
-    }).finally(() => setLoading(false));
+    }).catch(err => toast.error(err.message)).finally(() => setLoading(false));
   }, []);
 
   const handleSave = async (key: string) => {

@@ -111,12 +111,12 @@ export const Sidebar = memo(function Sidebar() {
   const toggleCollapse = useCallback(() => setCollapsed(prev => !prev), []);
 
   return (
-    <aside className={`fixed left-0 top-0 z-40 h-screen ${collapsed ? 'w-20' : 'w-64'} gradient-sidebar border-r border-[rgba(255,255,255,0.08)] transition-all duration-300`}>
+    <aside className={`fixed left-0 top-0 z-40 h-screen ${collapsed ? 'w-20' : 'w-64'} gradient-sidebar transition-all duration-300`}>
       <div className="flex flex-col h-full">
         <div className={`flex border-b border-[rgba(255,255,255,0.08)] transition-all duration-300 ${collapsed ? 'flex-col items-center py-4 gap-4' : 'flex-row items-center justify-between px-4 py-4'}`}>
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-[#5B9BD5] flex items-center justify-center shrink-0">
-              <Store size={20} className="text-white" />
+            <div className="w-9 h-9 rounded-xl bg-[#90CAF9] flex items-center justify-center shrink-0">
+              <Store size={20} className="text-[#0B1B2B]" />
             </div>
             {!collapsed && (
               <div className="overflow-hidden">
@@ -199,7 +199,7 @@ export const Sidebar = memo(function Sidebar() {
 
           {user && (
             <div className={cn('flex items-center gap-3 rounded-xl bg-[#1E1E1E] p-2.5 border border-[rgba(255,255,255,0.06)]', collapsed ? 'justify-center' : '')} title={collapsed ? `${user.firstName} ${user.lastName}` : undefined}>
-              <div className="w-8 h-8 rounded-full bg-[#5B9BD5] flex items-center justify-center shrink-0">
+              <div className="w-8 h-8 rounded-full bg-[#90CAF9] flex items-center justify-center shrink-0">
                 <span className="text-xs font-bold text-white">
                   {user.firstName?.[0]}{user.lastName?.[0]}
                 </span>
@@ -215,7 +215,7 @@ export const Sidebar = memo(function Sidebar() {
             </div>
           )}
 
-          <button onClick={logout} className={cn('sidebar-item w-full text-[#EF5350] hover:text-[#EF5350] hover:bg-[rgba(239,83,80,0.1)]', collapsed && 'justify-center px-2')} title={collapsed ? 'Cerrar Sesión' : undefined}>
+          <button onClick={logout} className={cn('sidebar-item w-full text-[#EF9A9A] hover:text-[#EF9A9A] hover:bg-[rgba(239,154,154,0.1)]', collapsed && 'justify-center px-2')} title={collapsed ? 'Cerrar Sesión' : undefined}>
             <LogOut size={20} />
             {!collapsed && <span>Cerrar Sesión</span>}
           </button>

@@ -20,6 +20,7 @@ export default function UsersPage() {
     setLoading(true);
     Promise.all([usersApi.getAll({ search }), rolesApi.getAll()])
       .then(([u, r]) => { setUsers(u.data || []); setRoles(r); })
+      .catch(err => toast.error(err.message))
       .finally(() => setLoading(false));
   };
 

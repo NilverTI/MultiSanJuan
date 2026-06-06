@@ -67,8 +67,8 @@ export default function POSPage() {
     cashRegisterApi.current().then((res: any) => {
       setCashRegisterOpen(res.register?.status === 'OPEN');
     }).catch(() => {});
-    productsApi.getAll({ limit: 50 }).then(res => setProducts(res.data || []));
-    customersApi.getAll({ limit: 5 }).then(res => setCustomers(res.data || []));
+    productsApi.getAll({ limit: 50 }).then(res => setProducts(res.data || [])).catch(err => toast.error(err.message));
+    customersApi.getAll({ limit: 5 }).then(res => setCustomers(res.data || [])).catch(err => toast.error(err.message));
   }, []);
 
   const handleSaveCustomer = async () => {
@@ -98,6 +98,8 @@ export default function POSPage() {
         const res = await productsApi.getAll({ search: searchQuery, limit: 10 });
         setSearchResults(res.data || []);
         setShowResults(true);
+      } catch(err) {
+        toast.error(err.message);
       } finally {
         setSearching(false);
       }

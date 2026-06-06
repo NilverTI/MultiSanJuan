@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { inventoryApi } from '@/services/api';
 import { formatDate, translateInventoryMovementType } from '@/lib/utils';
+import { toast } from 'sonner';
 import { ArrowDownUp, Loader2, Boxes } from 'lucide-react';
 
 export default function InventoryPage() {
@@ -12,7 +13,7 @@ export default function InventoryPage() {
 
   useEffect(() => {
     setLoading(true);
-    inventoryApi.getMovements({ page, limit: 30 }).then((res: any) => setMovements(res.data || [])).finally(() => setLoading(false));
+    inventoryApi.getMovements({ page, limit: 30 }).then((res: any) => setMovements(res.data || [])).catch(err => toast.error(err.message)).finally(() => setLoading(false));
   }, [page]);
 
   return (

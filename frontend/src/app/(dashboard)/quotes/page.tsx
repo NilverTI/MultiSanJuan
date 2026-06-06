@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { quotesApi } from '@/services/api';
 import { formatCurrency, formatDate, getStatusColor, translateStatus } from '@/lib/utils';
+import { toast } from 'sonner';
 import { FileText, Plus, Search, Loader2, ScrollText } from 'lucide-react';
 
 export default function QuotesPage() {
@@ -12,7 +13,7 @@ export default function QuotesPage() {
 
   useEffect(() => {
     setLoading(true);
-    quotesApi.getAll({ page, limit: 20 }).then((res: any) => setQuotes(res.data || [])).finally(() => setLoading(false));
+    quotesApi.getAll({ page, limit: 20 }).then((res: any) => setQuotes(res.data || [])).catch(err => toast.error(err.message)).finally(() => setLoading(false));
   }, [page]);
 
   return (

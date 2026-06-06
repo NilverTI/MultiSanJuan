@@ -14,7 +14,7 @@ export default function CategoriesPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const load = () => { setLoading(true); categoriesApi.getAll().then(setCategories).finally(() => setLoading(false)); };
+  const load = () => { setLoading(true); categoriesApi.getAll().then(setCategories).catch(err => toast.error(err.message)).finally(() => setLoading(false)); };
   useEffect(() => { load(); }, []);
 
   const handleEdit = (cat: any) => {

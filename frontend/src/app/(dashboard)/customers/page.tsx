@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { customersApi } from '@/services/api';
 import { formatDate } from '@/lib/utils';
+import { toast } from 'sonner';
 import { Search, UserPlus, Users, Loader2 } from 'lucide-react';
 
 export default function CustomersPage() {
@@ -12,7 +13,7 @@ export default function CustomersPage() {
 
   useEffect(() => {
     setLoading(true);
-    customersApi.getAll({ search }).then((res: any) => setCustomers(res.data || [])).finally(() => setLoading(false));
+    customersApi.getAll({ search }).then((res: any) => setCustomers(res.data || [])).catch(err => toast.error(err.message)).finally(() => setLoading(false));
   }, [search]);
 
   return (

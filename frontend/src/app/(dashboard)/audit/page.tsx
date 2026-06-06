@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { auditApi } from '@/services/api';
 import { formatDate, getStatusColor, translateStatus } from '@/lib/utils';
+import { toast } from 'sonner';
 import { Shield, Search, Filter, Loader2, ScrollText } from 'lucide-react';
 
 export default function AuditPage() {
@@ -13,7 +14,7 @@ export default function AuditPage() {
 
   useEffect(() => {
     setLoading(true);
-    auditApi.getAll({ page, limit: 50, ...filters }).then((res: any) => setLogs(res.data || [])).finally(() => setLoading(false));
+    auditApi.getAll({ page, limit: 50, ...filters }).then((res: any) => setLogs(res.data || [])).catch(err => toast.error(err.message)).finally(() => setLoading(false));
   }, [page, filters]);
 
   return (

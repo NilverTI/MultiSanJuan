@@ -17,6 +17,7 @@ export default function SalesPage() {
     setLoading(true);
     salesApi.getAll({ page, limit: 20 })
       .then((res: any) => { setSales(res.data); setTotal(res.total); })
+      .catch(err => toast.error(err.message))
       .finally(() => setLoading(false));
   };
 
